@@ -6,9 +6,11 @@ const {
   fetchLatestBaileysVersion
 } = require("@whiskeysockets/baileys");
 const { Boom } = require("@hapi/boom");
-const qrcode = require("qrcode-terminal");
+const qrcodeTerminal = require("qrcode-terminal");
+const QRCode = require("qrcode");          // ✅ For PNG generation
 const { createClient } = require("@supabase/supabase-js");
 const path = require("path");
+const fs = require("fs");
 
 // === HARDCODED CONFIG ===
 const SUPABASE_URL = "https://tjdepqtouvbwqrakarkh.supabase.co";
@@ -22,30 +24,16 @@ const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 // === TODAY RANGE in Pakistan Standard Time (UTC+5) ===
 function todayRangePST() {
   const now = new Date();
-
-  // Convert current UTC time to Pakistan date
   const pstOffset = 5 * 60; // minutes
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
   const pstMs = utcMs + pstOffset * 60000;
   const pstNow = new Date(pstMs);
 
-  // Get PST midnight start/end
-  const startPST = new Date(
-    pstNow.getFullYear(),
-    pstNow.getMonth(),
-    pstNow.getDate(),
-    0, 0, 0
-  );
-  const endPST = new Date(
-    pstNow.getFullYear(),
-    pstNow.getMonth(),
-    pstNow.getDate(),
-    23, 59, 59
-  );
+  const startPST = new Date(pstNow.getFullYear(), pstNow.getMonth(), pstNow.getDate(), 0, 0, 0);
+  const endPST   = new Date(pstNow.getFullYear(), pstNow.getMonth(), pstNow.getDate(), 23, 59, 59);
 
-  // Convert back to UTC ISO for Supabase filtering
   const startUTC = new Date(startPST.getTime() - pstOffset * 60000);
-  const endUTC   = new Date(endPST.getTime()   - pstOffset * 60000);
+  const endUTC   = new Date(endPST.getTime() - pstOffset * 60000);
 
   console.log(`📅 Pakistan today: ${startPST.toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })} → ${endPST.toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}`);
   return { startUTC, endUTC };
@@ -112,7 +100,21 @@ async function startBot(messages) {
   sock.ev.on("creds.update", saveCreds);
 
   sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
-    if (qr) qrcode.generate(qr, { small: true });
+    if (qr) {
+      // ✅ Terminal QR (for quick dev scanning)
+      qrcodeTerminal.generate(qr, { small: true });
+
+      // ✅ Persistent PNG saved to /tmp
+      const outPath = "/tmp/whatsapp-qr.png";
+      try {
+        await QRCode.toFile(outPath, qr, { type: "png", width: 300 });
+        console.log(`📂 QR code saved to ${outPath}`);
+        console.log("👉 If running on Railway, open a shell and run:");
+        console.log(`   cat ${outPath} > qrcode.png  (then download qrcode.png)`);
+      } catch (err) {
+        console.error("⚠️ Failed to save QR PNG:", err.message);
+      }
+    }
 
     if (connection === "close") {
       const shouldReconnect =
