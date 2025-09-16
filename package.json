@@ -1,0 +1,26 @@
+{
+  "name": "messagesending",
+  "version": "1.0.0",
+  "description": "ready to be deployed on railway",
+  "homepage": "https://github.com/Rizwan-090505/MessageSending#readme",
+  "bugs": {
+    "url": "https://github.com/Rizwan-090505/MessageSending/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rizwan-090505/MessageSending.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@supabase/supabase-js": "^2.57.4",
+    "@whiskeysockets/baileys": "^7.0.0-rc.3",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
