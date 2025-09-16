@@ -15,13 +15,14 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-"start":"node index.js",
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
     "@supabase/supabase-js": "^2.57.4",
     "@whiskeysockets/baileys": "^7.0.0-rc.3",
+    "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0"
   }
 }
