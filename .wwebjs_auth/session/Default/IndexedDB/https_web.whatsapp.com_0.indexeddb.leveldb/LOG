@@ -1,0 +1,46 @@
+2026/01/11-18:04:29.214 5acf Reusing MANIFEST /home/rixx/Codespace/web_dev/newBailey/.wwebjs_auth/session/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/01/11-18:04:29.217 5acf Recovering log #1101
+2026/01/11-18:04:29.589 5acf Reusing old log /home/rixx/Codespace/web_dev/newBailey/.wwebjs_auth/session/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/001101.log 
+2026/01/11-18:04:32.759 5ad6 Level-0 table #1128: started
+2026/01/11-18:04:32.857 5ad6 Level-0 table #1128: 895025 bytes OK
+2026/01/11-18:04:32.870 5ad6 Delete type=0 #1101
+2026/01/11-18:04:32.876 5acf Manual compaction at level-0 from '\x00%\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00&\x00\x00\x00' @ 0 : 0; will stop at '\x00%\x00\x00\x05' @ 3723536 : 1
+2026/01/11-18:04:32.876 5acf Compacting 1@0 + 0@1 files
+2026/01/11-18:04:32.933 5acf Generated table #1129@0: 18370 keys, 171881 bytes
+2026/01/11-18:04:32.961 5acf Generated table #1130@0: 7279 keys, 233923 bytes
+2026/01/11-18:04:32.985 5acf Generated table #1131@0: 8099 keys, 130556 bytes
+2026/01/11-18:04:32.985 5acf Compacted 1@0 + 0@1 files => 536360 bytes
+2026/01/11-18:04:32.995 5acf compacted to: files[ 0 3 35 0 0 0 0 ]
+2026/01/11-18:04:32.997 5acf Manual compaction at level-0 from '\x00%\x00\x00\x05' @ 3723536 : 1 .. '\x00&\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/01/11-18:04:33.001 5acf Compacting 1@1 + 10@2 files
+2026/01/11-18:04:33.073 5acf Generated table #1132@1: 1796 keys, 2134577 bytes
+2026/01/11-18:04:33.335 5acf Generated table #1133@1: 43561 keys, 2235952 bytes
+2026/01/11-18:04:33.630 5acf Generated table #1134@1: 35493 keys, 2261844 bytes
+2026/01/11-18:04:34.054 5acf Generated table #1135@1: 51713 keys, 2261048 bytes
+2026/01/11-18:04:34.223 5acf Generated table #1136@1: 31653 keys, 2164601 bytes
+2026/01/11-18:04:34.327 5acf Generated table #1137@1: 1576 keys, 2121125 bytes
+2026/01/11-18:04:34.424 5acf Generated table #1138@1: 2645 keys, 2121817 bytes
+2026/01/11-18:04:34.769 5acf Generated table #1139@1: 102977 keys, 2255123 bytes
+2026/01/11-18:04:35.045 5acf Generated table #1140@1: 100603 keys, 2251189 bytes
+2026/01/11-18:04:35.299 5acf Generated table #1141@1: 101177 keys, 2250993 bytes
+2026/01/11-18:04:35.335 5acf Generated table #1142@1: 12927 keys, 286543 bytes
+2026/01/11-18:04:35.335 5acf Compacted 1@1 + 10@2 files => 22344812 bytes
+2026/01/11-18:04:35.344 5acf compacted to: files[ 0 2 36 0 0 0 0 ]
+2026/01/11-18:04:35.346 5acf Delete type=2 #1068
+2026/01/11-18:04:35.347 5acf Delete type=2 #1106
+2026/01/11-18:04:35.347 5acf Delete type=2 #1107
+2026/01/11-18:04:35.347 5acf Delete type=2 #1108
+2026/01/11-18:04:35.347 5acf Delete type=2 #1109
+2026/01/11-18:04:35.347 5acf Delete type=2 #1110
+2026/01/11-18:04:35.347 5acf Delete type=2 #1111
+2026/01/11-18:04:35.347 5acf Delete type=2 #1112
+2026/01/11-18:04:35.349 5acf Delete type=2 #1113
+2026/01/11-18:04:35.349 5acf Delete type=2 #1114
+2026/01/11-18:04:35.349 5acf Delete type=2 #1128
+2026/01/11-18:04:35.349 5acf Delete type=2 #1130
+2026/01/11-18:04:35.488 5ad1 Compacting 1@1 + 2@2 files
+2026/01/11-18:04:35.684 5ad1 Generated table #1143@1: 51413 keys, 2235511 bytes
+2026/01/11-18:04:35.944 5ad1 Generated table #1144@1: 37102 keys, 2198507 bytes
+2026/01/11-18:04:35.951 5ad1 Generated table #1145@1: 2 keys, 3407 bytes
+2026/01/11-18:04:35.951 5ad1 Compacted 1@1 + 2@2 files => 4437425 bytes
+2026/01/11-18:04:35.961 5ad1 compacted to: files[ 0 1 37 0 0 0 0 ]
