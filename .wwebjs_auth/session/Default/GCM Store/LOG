@@ -1,3 +1,2 @@
-2026/01/11-18:04:33.775 5ad7 Reusing MANIFEST /home/rixx/Codespace/web_dev/newBailey/.wwebjs_auth/session/Default/GCM Store/MANIFEST-000001
-2026/01/11-18:04:33.778 5ad7 Recovering log #3
-2026/01/11-18:04:33.779 5ad7 Reusing old log /home/rixx/Codespace/web_dev/newBailey/.wwebjs_auth/session/Default/GCM Store/000003.log 
+2026/01/11-19:43:38.228 8782 Creating DB /home/rixx/Codespace/web_dev/MessageSending/.wwebjs_auth/session/Default/GCM Store since it was missing.
+2026/01/11-19:43:38.243 8782 Reusing MANIFEST /home/rixx/Codespace/web_dev/MessageSending/.wwebjs_auth/session/Default/GCM Store/MANIFEST-000001
