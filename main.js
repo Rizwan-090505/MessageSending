@@ -1,4 +1,3 @@
-// main.js
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -25,7 +24,8 @@ function createWindow() {
         backgroundColor: '#1e1e1e',
         webPreferences: {
             nodeIntegration: true,
-            contextIsolation: false
+            contextIsolation: false, // Essential for internal tools
+            webSecurity: false       // Helps with local resources
         },
         autoHideMenuBar: true
     });
@@ -50,58 +50,34 @@ function toWid(mobile) {
 }
 
 // ============================================================
-// === 🛠️ FILE LOADER ===
+// === 🛠️ FILE HANDLING (NEW: Base64 Logic) ===
 // ============================================================
-function getLocalMedia(filePath) {
+// We no longer read from disk. We take the Base64 sent from UI.
+function createMediaFromBase64(base64Data, filename, mimetype) {
     try {
-        // Normalize the path to handle potential OS specific issues
-        const absolutePath = path.resolve(filePath);
-        
-        if (!fs.existsSync(absolutePath)) {
-            console.error("File not found on disk:", absolutePath);
-            return null;
-        }
-
-        const b64data = fs.readFileSync(absolutePath, { encoding: 'base64' });
-        const filename = path.basename(absolutePath);
-        const ext = path.extname(absolutePath).toLowerCase();
-
-        const mimeMap = {
-            '.png': 'image/png',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.pdf': 'application/pdf',
-            '.mp4': 'video/mp4',
-            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        };
-
-        const mimetype = mimeMap[ext] || 'application/octet-stream';
-        return new MessageMedia(mimetype, b64data, filename);
-
+        if (!base64Data) return null;
+        // Remove data:image/png;base64, prefix if present
+        const b64 = base64Data.split(',')[1] || base64Data;
+        return new MessageMedia(mimetype, b64, filename);
     } catch (error) {
-        console.error("Error loading media manually:", error);
+        console.error("Error creating media:", error);
         return null;
     }
 }
 
 // ============================================================
-// === 🎨 PREMIUM NOTICE GENERATOR (Fixed Layout) ===
+// === 🎨 PREMIUM NOTICE GENERATOR ===
 // ============================================================
-
 function calculateTextLines(ctx, text, maxWidth) {
     const paragraphs = text.split('\n');
     let allLines = [];
-
     paragraphs.forEach((paragraph) => {
         if (paragraph.trim() === '') {
             allLines.push({ text: '', isSpacer: true });
             return;
         }
-
         const words = paragraph.split(' ');
         let currentLine = words[0];
-
         for (let i = 1; i < words.length; i++) {
             const word = words[i];
             const width = ctx.measureText(currentLine + " " + word).width;
@@ -114,7 +90,6 @@ function calculateTextLines(ctx, text, maxWidth) {
         }
         allLines.push({ text: currentLine, isSpacer: false });
     });
-    
     return allLines;
 }
 
@@ -124,16 +99,10 @@ function drawPinIcon(ctx, x, y, size, color) {
     ctx.scale(size / 100, size / 100);
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(50, 0);
-    ctx.bezierCurveTo(22.4, 0, 0, 22.4, 0, 50);
-    ctx.bezierCurveTo(0, 85, 50, 100, 50, 100);
-    ctx.bezierCurveTo(50, 100, 100, 85, 100, 50);
-    ctx.bezierCurveTo(100, 22.4, 77.6, 0, 50, 0);
-    ctx.fill();
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(50, 50, 18, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(50, 0); ctx.bezierCurveTo(22.4, 0, 0, 22.4, 0, 50);
+    ctx.bezierCurveTo(0, 85, 50, 100, 50, 100); ctx.bezierCurveTo(50, 100, 100, 85, 100, 50);
+    ctx.bezierCurveTo(100, 22.4, 77.6, 0, 50, 0); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(50, 50, 18, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
 }
 
@@ -142,25 +111,11 @@ function drawPhoneIcon(ctx, x, y, size, color) {
     ctx.translate(x, y);
     ctx.scale(size / 24, size / 24); 
     ctx.fillStyle = color;
-    
     ctx.beginPath();
-    ctx.moveTo(6, 4); 
-    ctx.lineTo(9, 4); 
-    ctx.lineTo(10, 7); 
-    ctx.lineTo(8, 9); 
-    
-    ctx.quadraticCurveTo(10, 14, 15, 16); 
-    
-    ctx.lineTo(17, 14); 
-    ctx.lineTo(20, 15); 
-    ctx.lineTo(20, 19); 
-    ctx.lineTo(19, 20); 
-    
-    ctx.bezierCurveTo(10, 20, 4, 14, 4, 5); 
-    
-    ctx.lineTo(6, 4);
-    
-    ctx.fill();
+    ctx.moveTo(6, 4); ctx.lineTo(9, 4); ctx.lineTo(10, 7); ctx.lineTo(8, 9); 
+    ctx.quadraticCurveTo(10, 14, 15, 16); ctx.lineTo(17, 14); ctx.lineTo(20, 15); 
+    ctx.lineTo(20, 19); ctx.lineTo(19, 20); ctx.bezierCurveTo(10, 20, 4, 14, 4, 5); 
+    ctx.lineTo(6, 4); ctx.fill();
     ctx.restore();
 }
 
@@ -173,6 +128,7 @@ async function generateNoticeImage(text) {
     const padding = 100;
     const textAreaWidth = width - (padding * 2);
     
+    // Colors
     const C_NAVY = '#0a192f';   
     const C_GOLD = '#d4af37';   
     const C_BG_OUT = '#eef2f5'; 
@@ -189,7 +145,6 @@ async function generateNoticeImage(text) {
     const dummyCanvas = createCanvas(width, 100);
     const dummyCtx = dummyCanvas.getContext('2d');
     dummyCtx.font = bodyFont;
-
     const lines = calculateTextLines(dummyCtx, text, textAreaWidth);
     
     let calculatedTextHeight = 0;
@@ -199,11 +154,8 @@ async function generateNoticeImage(text) {
     });
 
     const headerHeight = 350;
-    const dividerPadding = 50;
-    const salutationHeight = 120;
     const footerHeight = 250; 
-    
-    const paperHeight = headerHeight + dividerPadding + salutationHeight + calculatedTextHeight + footerHeight;
+    const paperHeight = headerHeight + 50 + 120 + calculatedTextHeight + footerHeight;
     const canvasHeight = paperHeight + 100;
 
     const canvas = createCanvas(width, canvasHeight);
@@ -215,23 +167,21 @@ async function generateNoticeImage(text) {
     const paperX = 40;
     const paperY = 50;
     const paperW = width - 80;
-    const paperH = paperHeight;
-
+    
     ctx.shadowColor = "rgba(0,0,0,0.15)";
     ctx.shadowBlur = 30;
     ctx.shadowOffsetY = 15;
     ctx.fillStyle = C_PAPER;
-    ctx.fillRect(paperX, paperY, paperW, paperH);
+    ctx.fillRect(paperX, paperY, paperW, paperHeight);
     ctx.shadowBlur = 0; 
     ctx.shadowOffsetY = 0;
 
     ctx.strokeStyle = C_NAVY;
     ctx.lineWidth = 3;
-    ctx.strokeRect(paperX + 20, paperY + 20, paperW - 40, paperH - 40);
-    
+    ctx.strokeRect(paperX + 20, paperY + 20, paperW - 40, paperHeight - 40);
     ctx.strokeStyle = C_GOLD;
     ctx.lineWidth = 1.5;
-    ctx.strokeRect(paperX + 30, paperY + 30, paperW - 60, paperH - 60);
+    ctx.strokeRect(paperX + 30, paperY + 30, paperW - 60, paperHeight - 60);
 
     const logoPath = path.join(__dirname, 'logo.png');
     let logoImage = null;
@@ -240,13 +190,11 @@ async function generateNoticeImage(text) {
 
     if (fs.existsSync(logoPath)) {
         logoImage = await loadImage(logoPath);
-        
         ctx.save();
         ctx.globalAlpha = 0.05; 
         const wmSize = 800;
         ctx.drawImage(logoImage, (width/2)-(wmSize/2), (canvasHeight/2)-(wmSize/2), wmSize, wmSize);
         ctx.restore();
-
         ctx.drawImage(logoImage, paperX + 60, headerContentStartY, logoSize, logoSize);
     }
 
@@ -274,12 +222,10 @@ async function generateNoticeImage(text) {
     ctx.fillText(dateStr, paperX + paperW - 70, dividerY + 40);
 
     let cursorY = dividerY + 100;
-
     ctx.textAlign = 'left';
     ctx.fillStyle = C_TEXT_BODY;
     ctx.font = 'bold 40px "Georgia"';
     ctx.fillText("Respected Parents,", padding + 20, cursorY);
-    
     cursorY += 70; 
 
     ctx.font = bodyFont;
@@ -294,51 +240,45 @@ async function generateNoticeImage(text) {
         }
     }
 
-    const footerStartY = (paperY + paperH) - 160; 
+    const footerStartY = (paperY + paperHeight) - 160; 
     const centerX = width / 2;
     
-    const drawFooterRow = (text, iconType, yPos, fontSize, fontColor) => {
-        ctx.font = fontSize;
-        const textWidth = ctx.measureText(text).width;
-        const iconSize = 32;
-        const iconGap = 15;
-        
-        const totalContentWidth = iconSize + iconGap + textWidth;
-        const startX = centerX - (totalContentWidth / 2);
-        
-        if (iconType === 'pin') {
-             drawPinIcon(ctx, startX, yPos - 24, iconSize, C_GOLD);
-        } else {
-             drawPhoneIcon(ctx, startX, yPos - 24, iconSize, C_GOLD);
-        }
-        
-        ctx.fillStyle = fontColor;
-        ctx.textAlign = 'left';
-        ctx.fillText(text, startX + iconSize + iconGap, yPos);
-    };
+    ctx.font = '28px Arial';
+    let textWidth = ctx.measureText("583 Q Block, Model Town, Lahore").width;
+    let iconSize = 32;
+    let iconGap = 15;
+    let startX = centerX - ((iconSize + iconGap + textWidth) / 2);
+    drawPinIcon(ctx, startX, footerStartY - 24, iconSize, C_GOLD);
+    ctx.fillStyle = C_NAVY;
+    ctx.textAlign = 'left';
+    ctx.fillText("583 Q Block, Model Town, Lahore", startX + iconSize + iconGap, footerStartY);
 
-    drawFooterRow("583 Q Block, Model Town, Lahore", 'pin', footerStartY, '28px Arial', C_NAVY);
-    drawFooterRow("0323 - 4447292", 'phone', footerStartY + 60, 'bold 36px Arial', C_NAVY);
+    ctx.font = 'bold 36px Arial';
+    textWidth = ctx.measureText("0323 - 4447292").width;
+    startX = centerX - ((iconSize + iconGap + textWidth) / 2);
+    drawPhoneIcon(ctx, startX, footerStartY + 60 - 24, iconSize, C_GOLD);
+    ctx.fillText("0323 - 4447292", startX + iconSize + iconGap, footerStartY + 60);
 
     const buffer = canvas.toBuffer('image/png');
+    // We can return buffer directly or save temp. Saving temp is safer for MessageMedia.
     const tempPath = path.join(app.getPath('temp'), `notice_hq_${Date.now()}.png`);
     fs.writeFileSync(tempPath, buffer);
-    return tempPath;
+    
+    // Read it back as B64 to standardize our Media Object approach
+    const b64 = fs.readFileSync(tempPath, { encoding: 'base64' });
+    return new MessageMedia('image/png', b64, 'Notice.png');
 }
 
 // === IPC LISTENERS ===
-
 ipcMain.handle('get-classes', async () => {
-    const { data, error } = await supabase
-        .from("classes")
-        .select("name") 
-        .order('name', { ascending: true });
-
-    if (error) {
-        console.error("Supabase Error:", error);
+    try {
+        const { data, error } = await supabase.from("classes").select("name").order('name', { ascending: true });
+        if(error) throw error;
+        return data.map(i => i.name);
+    } catch (e) {
+        console.error("DB Error:", e);
         return [];
     }
-    return data.map(item => item.name);
 });
 
 // === INIT WHATSAPP ===
@@ -349,22 +289,12 @@ ipcMain.on('init-whatsapp', () => {
         authStrategy: new LocalAuth({ clientId: "student-sender" }),
         puppeteer: { 
             headless: true, 
-            args: [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox',
-                '--disable-gpu', 
-                '--disable-software-rasterizer',
-                '--disable-dev-shm-usage',
-                '--no-first-run',
-                '--no-zygote'
-            ] 
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'] 
         }
     });
 
     whatsappClient.on('qr', (qr) => {
-        qrcode.toDataURL(qr, (err, url) => {
-            mainWindow.webContents.send('wa-qr', url);
-        });
+        qrcode.toDataURL(qr, (err, url) => mainWindow.webContents.send('wa-qr', url));
         mainWindow.webContents.send('log', '>> Scan QR Code to connect.');
     });
 
@@ -372,10 +302,6 @@ ipcMain.on('init-whatsapp', () => {
         isClientReady = true;
         mainWindow.webContents.send('wa-ready');
         mainWindow.webContents.send('log', '>> WhatsApp Connected Successfully!');
-    });
-
-    whatsappClient.on('authenticated', () => {
-        mainWindow.webContents.send('log', '>> Authenticated...');
     });
 
     whatsappClient.initialize();
@@ -386,66 +312,71 @@ ipcMain.on('stop-sending', () => {
     mainWindow.webContents.send('log', '🛑 Stopping process requested by user...');
 });
 
-// === START SENDING ===
+// === START SENDING (WRAPPER) ===
 ipcMain.on('start-sending', async (event, payload) => {
-    const { classNames, filterStatus, messageText, filePath, isNoticeMode, includeDetails } = payload;
+    // Top-level Try/Catch to ensure errors get logged to UI
+    try {
+        await handleSendingProcess(payload);
+    } catch (criticalError) {
+        console.error(criticalError);
+        mainWindow.webContents.send('log', `❌ CRITICAL ERROR: ${criticalError.message}`);
+        mainWindow.webContents.send('sending-finished');
+    }
+});
+
+async function handleSendingProcess(payload) {
+    const { classNames, filterStatus, messageText, fileData, fileName, mimeType, isNoticeMode, includeDetails } = payload;
     
     abortSending = false;
-    mainWindow.webContents.send('log', '>> Fetching students...');
+    mainWindow.webContents.send('log', '>> Starting Bulk Sender...');
+    mainWindow.webContents.send('log', '>> Fetching students from Database...');
 
-    let query = supabase
-        .from("students")
-        .select("*, classes!inner(name)") 
-        .in("classes.name", classNames);
-    
+    let query = supabase.from("students").select("*, classes!inner(name)").in("classes.name", classNames);
     if (filterStatus === "CLEARED") query = query.eq("Clear", true);
     if (filterStatus === "NOT_CLEARED") query = query.eq("Clear", false);
 
     const { data: students, error } = await query;
 
     if (error) {
-        mainWindow.webContents.send('log', `Error: ${error.message}`);
-        mainWindow.webContents.send('sending-finished'); 
+        throw new Error(`Supabase Error: ${error.message}`);
+    }
+
+    if (!students || students.length === 0) {
+        mainWindow.webContents.send('log', '>> ⚠️ No students found for this selection.');
+        mainWindow.webContents.send('sending-finished');
         return;
     }
 
     const recipients = [];
     const seen = new Set();
-
-    for (const s of students || []) {
+    for (const s of students) {
         const wid = toWid(s.mobilenumber);
         if (!wid || seen.has(wid)) continue;
         seen.add(wid);
-        recipients.push({ 
-            ...s, 
-            class_name: s.classes ? s.classes.name : "Unknown",
-            wid 
-        });
+        recipients.push({ ...s, class_name: s.classes ? s.classes.name : "Unknown", wid });
     }
 
     mainWindow.webContents.send('log', `>> Found ${recipients.length} valid recipients.`);
     
-    // --- PREPARE MEDIA (LOGIC FIXED: File Priority > Notice Priority) ---
+    // --- PREPARE MEDIA ---
     let media = null;
     let isGeneratedNotice = false;
 
-    // 1. Check for manual file attachment FIRST
-    if (filePath) {
-        mainWindow.webContents.send('log', `>> 📁 Attempting to load: ${path.basename(filePath)}`);
-        media = getLocalMedia(filePath);
+    // 1. Check for manual file attachment (Base64 from UI)
+    if (fileData) {
+        mainWindow.webContents.send('log', `>> 📁 Processing Attachment: ${fileName}`);
+        media = createMediaFromBase64(fileData, fileName, mimeType);
         
         if (media) {
-            mainWindow.webContents.send('log', `>> ✅ Attachment Loaded: ${media.filename} (${media.mimetype})`);
+            mainWindow.webContents.send('log', `>> ✅ Attachment Ready (${media.mimetype})`);
         } else {
-            mainWindow.webContents.send('log', `>> ❌ CRITICAL: Could not load file at ${filePath}`);
-            mainWindow.webContents.send('log', `>> ❌ Check if file exists and permissions are correct.`);
+            mainWindow.webContents.send('log', `>> ❌ Failed to process attachment.`);
         }
     }
-    // 2. If NO file and Notice Mode is ON, generate notice
+    // 2. Check for Notice Mode
     else if (isNoticeMode) {
         mainWindow.webContents.send('log', '>> 🎨 Generating Premium Notice...');
-        const noticePath = await generateNoticeImage(messageText);
-        media = getLocalMedia(noticePath); 
+        media = await generateNoticeImage(messageText); // returns MessageMedia object now
         isGeneratedNotice = true;
     }
 
@@ -466,30 +397,29 @@ ipcMain.on('start-sending', async (event, payload) => {
             }
 
             if (isGeneratedNotice) {
-                // If using the image notice, the caption is just the student details
+                // Image Notice Mode
                 captionText = studentDetails;
             } else if (media) {
-                // Regular attachment
+                // File Mode
                 captionText = messageText; 
                 if (studentDetails) captionText += `\n\n${studentDetails}`;
             } else {
-                // Text only
+                // Text Mode
                 captionText = messageText;
                 if (studentDetails) captionText = `${studentDetails}\n\n${messageText}`;
             }
 
-            captionText = captionText.trim();
-
             if (media) {
-                await whatsappClient.sendMessage(r.wid, media, { caption: captionText });
+                await whatsappClient.sendMessage(r.wid, media, { caption: captionText.trim() });
             } else {
-                await whatsappClient.sendMessage(r.wid, captionText);
+                await whatsappClient.sendMessage(r.wid, captionText.trim());
             }
 
-            mainWindow.webContents.send('log', `✅ Sent to ${r.name} (${r.class_name})`);
+            mainWindow.webContents.send('log', `✅ Sent to ${r.name}`);
             sentCount++;
             mainWindow.webContents.send('progress', { current: sentCount, total: recipients.length });
 
+            // Delays
             if (sentCount % 50 === 0) {
                 mainWindow.webContents.send('log', '⏸ Taking a 30s safety break...');
                 await delay(30000);
@@ -502,7 +432,6 @@ ipcMain.on('start-sending', async (event, payload) => {
         }
     }
 
-    mainWindow.webContents.send('log', '🏁 Bulk sending finished/stopped.');
+    mainWindow.webContents.send('log', '🏁 Bulk sending finished.');
     mainWindow.webContents.send('sending-finished'); 
-});
-
+}
