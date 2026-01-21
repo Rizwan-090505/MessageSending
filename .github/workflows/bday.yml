@@ -1,0 +1,29 @@
+name: Run Birthday Bot
+
+on:
+  schedule:
+    # 10:00 AM PKT (GMT+5) is 05:00 AM UTC
+    - cron: '0 5 * * *'
+  workflow_dispatch:         # Still allows manual testing
+
+jobs:
+  run-node:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          # Only rename if your file is actually named ci.json
+          [ -f ci.json ] && mv ci.json package.json || echo "package.json already exists"
+          npm install
+
+      - name: Run script
+        run: node bday.js
