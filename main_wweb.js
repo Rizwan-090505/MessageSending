@@ -1,8 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-const pino = require('pino');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const { createClient } = require('@supabase/supabase-js');
 const qrcode = require('qrcode');
 const { registerFont, createCanvas, loadImage } = require('canvas');
@@ -13,7 +12,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let mainWindow;
-let sock; 
+let whatsappClient;
 let isClientReady = false;
 let abortSending = false; 
 
@@ -25,8 +24,8 @@ function createWindow() {
         backgroundColor: '#1e1e1e',
         webPreferences: {
             nodeIntegration: true,
-            contextIsolation: false, 
-            webSecurity: false       
+            contextIsolation: false, // Essential for internal tools
+            webSecurity: false       // Helps with local resources
         },
         autoHideMenuBar: true
     });
@@ -47,19 +46,19 @@ function toWid(mobile) {
     else if (d.startsWith("0") && d.length === 11) e164 = "92" + d.slice(1);
     else if (d.startsWith("3") && d.length === 10) e164 = "92" + d;
     else if (d.startsWith("0092") && d.length >= 14) e164 = d.slice(2);
-    // Baileys uses @s.whatsapp.net
-    return e164 ? `${e164}@s.whatsapp.net` : null;
+    return e164 ? `${e164}@c.us` : null;
 }
 
 // ============================================================
-// === 🛠️ FILE HANDLING ===
+// === 🛠️ FILE HANDLING (NEW: Base64 Logic) ===
 // ============================================================
+// We no longer read from disk. We take the Base64 sent from UI.
 function createMediaFromBase64(base64Data, filename, mimetype) {
     try {
         if (!base64Data) return null;
+        // Remove data:image/png;base64, prefix if present
         const b64 = base64Data.split(',')[1] || base64Data;
-        const buffer = Buffer.from(b64, 'base64');
-        return { buffer, mimetype, filename };
+        return new MessageMedia(mimetype, b64, filename);
     } catch (error) {
         console.error("Error creating media:", error);
         return null;
@@ -129,6 +128,7 @@ async function generateNoticeImage(text) {
     const padding = 100;
     const textAreaWidth = width - (padding * 2);
     
+    // Colors
     const C_NAVY = '#0a192f';   
     const C_GOLD = '#d4af37';   
     const C_BG_OUT = '#eef2f5'; 
@@ -260,12 +260,13 @@ async function generateNoticeImage(text) {
     ctx.fillText("0323 - 4447292", startX + iconSize + iconGap, footerStartY + 60);
 
     const buffer = canvas.toBuffer('image/png');
+    // We can return buffer directly or save temp. Saving temp is safer for MessageMedia.
+    const tempPath = path.join(app.getPath('temp'), `notice_hq_${Date.now()}.png`);
+    fs.writeFileSync(tempPath, buffer);
     
-    return { 
-        buffer: buffer, 
-        mimetype: 'image/png', 
-        filename: 'Notice.png' 
-    };
+    // Read it back as B64 to standardize our Media Object approach
+    const b64 = fs.readFileSync(tempPath, { encoding: 'base64' });
+    return new MessageMedia('image/png', b64, 'Notice.png');
 }
 
 // === IPC LISTENERS ===
@@ -280,51 +281,30 @@ ipcMain.handle('get-classes', async () => {
     }
 });
 
-// === INIT WHATSAPP (BAILEYS) ===
-async function connectToWhatsApp() {
-    if (sock) return;
-
-    // === CHANGED: Using 'auth_session_stable' folder ===
-    const { state, saveCreds } = await useMultiFileAuthState('auth_session_stable');
-    const { version } = await fetchLatestBaileysVersion();
-
-    sock = makeWASocket({
-        version,
-        auth: state,
-        printQRInTerminal: false,
-        logger: pino({ level: "silent" }),
-        browser: ['SchoolSender', 'Chrome', '1.0.0']
-    });
-
-    sock.ev.on('creds.update', saveCreds);
-
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
-
-        if(qr) {
-            qrcode.toDataURL(qr, (err, url) => mainWindow.webContents.send('wa-qr', url));
-            mainWindow.webContents.send('log', '>> Scan QR Code to connect.');
-        }
-
-        if(connection === 'close') {
-            const shouldReconnect = (lastDisconnect.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-            mainWindow.webContents.send('log', '>> Connection closed. ' + (shouldReconnect ? 'Reconnecting...' : 'Logged out.'));
-            sock = undefined; 
-            if(shouldReconnect) {
-                connectToWhatsApp();
-            }
-        }
-
-        if(connection === 'open') {
-            isClientReady = true;
-            mainWindow.webContents.send('wa-ready');
-            mainWindow.webContents.send('log', '>> WhatsApp Connected Successfully!');
-        }
-    });
-}
-
+// === INIT WHATSAPP ===
 ipcMain.on('init-whatsapp', () => {
-    connectToWhatsApp();
+    if (whatsappClient) return;
+
+    whatsappClient = new Client({
+        authStrategy: new LocalAuth({ clientId: "student-sender" }),
+        puppeteer: { 
+            headless: true, 
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'] 
+        }
+    });
+
+    whatsappClient.on('qr', (qr) => {
+        qrcode.toDataURL(qr, (err, url) => mainWindow.webContents.send('wa-qr', url));
+        mainWindow.webContents.send('log', '>> Scan QR Code to connect.');
+    });
+
+    whatsappClient.on('ready', () => {
+        isClientReady = true;
+        mainWindow.webContents.send('wa-ready');
+        mainWindow.webContents.send('log', '>> WhatsApp Connected Successfully!');
+    });
+
+    whatsappClient.initialize();
 });
 
 ipcMain.on('stop-sending', () => {
@@ -334,6 +314,7 @@ ipcMain.on('stop-sending', () => {
 
 // === START SENDING (WRAPPER) ===
 ipcMain.on('start-sending', async (event, payload) => {
+    // Top-level Try/Catch to ensure errors get logged to UI
     try {
         await handleSendingProcess(payload);
     } catch (criticalError) {
@@ -378,22 +359,24 @@ async function handleSendingProcess(payload) {
     mainWindow.webContents.send('log', `>> Found ${recipients.length} valid recipients.`);
     
     // --- PREPARE MEDIA ---
-    let mediaObj = null;
+    let media = null;
     let isGeneratedNotice = false;
 
+    // 1. Check for manual file attachment (Base64 from UI)
     if (fileData) {
         mainWindow.webContents.send('log', `>> 📁 Processing Attachment: ${fileName}`);
-        mediaObj = createMediaFromBase64(fileData, fileName, mimeType);
+        media = createMediaFromBase64(fileData, fileName, mimeType);
         
-        if (mediaObj) {
-            mainWindow.webContents.send('log', `>> ✅ Attachment Ready (${mediaObj.mimetype})`);
+        if (media) {
+            mainWindow.webContents.send('log', `>> ✅ Attachment Ready (${media.mimetype})`);
         } else {
             mainWindow.webContents.send('log', `>> ❌ Failed to process attachment.`);
         }
     }
+    // 2. Check for Notice Mode
     else if (isNoticeMode) {
         mainWindow.webContents.send('log', '>> 🎨 Generating Premium Notice...');
-        mediaObj = await generateNoticeImage(messageText); 
+        media = await generateNoticeImage(messageText); // returns MessageMedia object now
         isGeneratedNotice = true;
     }
 
@@ -414,45 +397,29 @@ async function handleSendingProcess(payload) {
             }
 
             if (isGeneratedNotice) {
+                // Image Notice Mode
                 captionText = studentDetails;
-            } else if (mediaObj) {
+            } else if (media) {
+                // File Mode
                 captionText = messageText; 
                 if (studentDetails) captionText += `\n\n${studentDetails}`;
             } else {
+                // Text Mode
                 captionText = messageText;
                 if (studentDetails) captionText = `${studentDetails}\n\n${messageText}`;
             }
 
-            if (mediaObj) {
-                const finalCaption = captionText ? captionText.trim() : "";
-                
-                if (mediaObj.mimetype.startsWith('image/')) {
-                    await sock.sendMessage(r.wid, { 
-                        image: mediaObj.buffer, 
-                        caption: finalCaption 
-                    });
-                } else if (mediaObj.mimetype.startsWith('video/')) {
-                    await sock.sendMessage(r.wid, { 
-                        video: mediaObj.buffer, 
-                        caption: finalCaption,
-                        gifPlayback: false 
-                    });
-                } else {
-                    await sock.sendMessage(r.wid, { 
-                        document: mediaObj.buffer, 
-                        mimetype: mediaObj.mimetype,
-                        fileName: mediaObj.filename,
-                        caption: finalCaption
-                    });
-                }
+            if (media) {
+                await whatsappClient.sendMessage(r.wid, media, { caption: captionText.trim() });
             } else {
-                await sock.sendMessage(r.wid, { text: captionText.trim() });
+                await whatsappClient.sendMessage(r.wid, captionText.trim());
             }
 
             mainWindow.webContents.send('log', `✅ Sent to ${r.name}`);
             sentCount++;
             mainWindow.webContents.send('progress', { current: sentCount, total: recipients.length });
 
+            // Delays
             if (sentCount % 50 === 0) {
                 mainWindow.webContents.send('log', '⏸ Taking a 30s safety break...');
                 await delay(30000);
