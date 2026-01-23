@@ -13,14 +13,18 @@ const { registerFont, createCanvas, loadImage } = require("canvas");
 
 // === CONFIGURATION ===
 const SUPABASE_URL = "https://tjdepqtouvbwqrakarkh.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqZGVwcXRvdXZid3FyYWthcmtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxODM4NTMsImV4cCI6MjA2NDc1OTg1M30.5sippZdNYf3uLISBOHHlJkphtlJc_Q1ZRTzX9E8WYb8";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqZGVwcXRvdXZid3FyYWthcmtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxODM4NTMsImV4cCI6MjA2NDc1OTg1M30.5sippZdNYf3uLISBOHHlJkphtlJc_Q1ZRTzX9E8WYb8";
 
-
-// Branding Config
-const SCHOOL_NAME = "DAR-E-ARQAM SCHOOL";
-const BRAND_COLOR = "#00008B"; // Dark Blue
-const GOLD_COLOR = "#C5A059"; // Professional Champagne Gold
+// Branding Config - Premium & Aesthetic
+const COLORS = {
+  primary: "#0F172A",    // Rich Navy (almost black)
+  secondary: "#D4AF37",  // Luxury Gold
+  secondaryLight: "#F3E5AB", // Champagne Gold
+  bgCenter: "#FFFFFF",
+  bgEdge: "#F1F5F9",     // Cool Grey edge
+  textMain: "#1E293B",
+  textMuted: "#64748B"
+};
 
 const FONT_PATH = path.join(__dirname, "revue.ttf");
 const LOGO_PATH = path.join(__dirname, "logo.png");
@@ -31,7 +35,6 @@ if (fs.existsSync(FONT_PATH)) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 function formatJid(number) {
@@ -42,117 +45,201 @@ function formatJid(number) {
   return null;
 }
 
-// === PROFESSIONAL GRAPHICS HELPERS ===
+// === HIGH-END GRAPHICS HELPERS ===
 
-function drawBackgroundPattern(ctx, width, height) {
-  // 1. Clean Background
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillRect(0, 0, width, height);
+// 1. Draw "Fancier" Corner Ribbons/Waves
+function drawCornerDecorations(ctx, width, height) {
+  ctx.save();
   
-  // 2. Subtle Geometric Pattern (Blue Circles)
-  ctx.globalAlpha = 0.03;
-  ctx.fillStyle = BRAND_COLOR;
-  for(let i=0; i<width; i+=60) {
-      for(let j=0; j<height; j+=60) {
-          ctx.beginPath();
-          ctx.arc(i, j, 10, 0, Math.PI*2);
-          ctx.fill();
-      }
-  }
-  ctx.globalAlpha = 1.0; // Reset alpha
+  // Top Right Gold Wave
+  ctx.beginPath();
+  ctx.moveTo(width, 0);
+  ctx.lineTo(width, 350);
+  ctx.bezierCurveTo(width - 100, 300, width - 350, 100, width - 400, 0);
+  ctx.fillStyle = COLORS.secondary;
+  ctx.fill();
 
-  // 3. Elegant Gold Border Frame
-  const padding = 30;
-  ctx.strokeStyle = GOLD_COLOR;
-  ctx.lineWidth = 5;
-  ctx.strokeRect(padding, padding, width - (padding*2), height - (padding*2));
-  
-  // Inner thin line
-  ctx.lineWidth = 2;
-  ctx.strokeRect(padding + 15, padding + 15, width - (padding*2) - 30, height - (padding*2) - 30);
+  // Top Right Navy Accent (Behind Gold)
+  ctx.beginPath();
+  ctx.moveTo(width, 0);
+  ctx.lineTo(width, 400);
+  ctx.bezierCurveTo(width - 50, 350, width - 400, 150, width - 450, 0);
+  ctx.globalCompositeOperation = "destination-over"; // Draw behind
+  ctx.fillStyle = COLORS.primary;
+  ctx.fill();
+  ctx.globalCompositeOperation = "source-over"; // Reset
+
+  // Bottom Left Navy Wave
+  ctx.beginPath();
+  ctx.moveTo(0, height);
+  ctx.lineTo(0, height - 300);
+  ctx.bezierCurveTo(100, height - 250, 300, height - 50, 400, height);
+  ctx.fillStyle = COLORS.primary;
+  ctx.fill();
+
+  // Bottom Left Gold Accent
+  ctx.beginPath();
+  ctx.moveTo(0, height);
+  ctx.lineTo(0, height - 250);
+  ctx.bezierCurveTo(50, height - 200, 250, height - 50, 300, height);
+  ctx.fillStyle = COLORS.secondary;
+  ctx.fill();
+
+  ctx.restore();
 }
 
-// === IMAGE GENERATION ===
+// 2. Gold Dust / Confetti (Premium feel)
+function drawGoldDust(ctx, width, height) {
+  const count = 50;
+  const colors = [COLORS.secondary, COLORS.secondaryLight, "#E6C200"];
+  
+  for (let i = 0; i < count; i++) {
+    const x = Math.random() * width;
+    const y = Math.random() * height;
+    const size = Math.random() * 4 + 1;
+    
+    ctx.globalAlpha = Math.random() * 0.6 + 0.2;
+    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+    
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1.0;
+}
+
+// === MAIN IMAGE GENERATOR ===
 async function generateBirthdayCard(studentName) {
   const width = 1080;
   const height = 1080;
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
 
-  // 1. Draw Background & Frame
-  drawBackgroundPattern(ctx, width, height);
+  // --- A. BACKGROUND ---
+  // Radial Gradient for a "Spotlight" effect
+  const grd = ctx.createRadialGradient(width/2, height/2, 100, width/2, height/2, 800);
+  grd.addColorStop(0, COLORS.bgCenter);
+  grd.addColorStop(1, COLORS.bgEdge);
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, width, height);
 
-  ctx.textAlign = "center";
+  // Add Texture/Decorations
+  drawCornerDecorations(ctx, width, height);
+  drawGoldDust(ctx, width, height);
 
-  // 2. Branding Section (Top)
-  const logoSize = 160; 
-  const logoYPos = 80;
+  // --- B. HEADER (Top Left) ---
+  const padX = 60;
+  const padY = 60;
+  const logoSize = 130;
 
   try {
     if (fs.existsSync(LOGO_PATH)) {
       const logo = await loadImage(LOGO_PATH);
-      ctx.drawImage(logo, (width/2) - (logoSize/2), logoYPos, logoSize, logoSize);
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.2)";
+      ctx.shadowBlur = 10;
+      ctx.drawImage(logo, padX, padY, logoSize, logoSize);
+      ctx.restore();
     }
   } catch (e) {}
 
-  // School Name
-  ctx.font = '45px "Revue", sans-serif'; 
-  ctx.fillStyle = BRAND_COLOR;
-  ctx.fillText(SCHOOL_NAME, width / 2, logoYPos + logoSize + 60);
+  // Text next to Logo
+  const textX = padX + logoSize + 30;
+  const textY = padY + 60; 
 
-  // 3. The Intro Text (Prominent & Spaced)
-  // Changed phrasing and style as requested
-  ctx.font = 'bold 35px "Arial", sans-serif';
-  ctx.fillStyle = "#555"; 
-  ctx.letterSpacing = "4px"; // Spaced out letters for elegance
-  // Moved down to Y=450 to create space from logo
-  ctx.fillText("SPECIAL WISHES FOR A BLESSED", width / 2, 450);
-  ctx.letterSpacing = "0px"; // Reset spacing
-
-  // 4. "BIRTHDAY" Title (Slightly Smaller & Revamped)
-  // Moved to Y=580 to create gap from intro text
-  ctx.save();
-  ctx.shadowColor = "rgba(197, 160, 89, 0.4)"; // Gold shadow
-  ctx.shadowBlur = 15;
+  ctx.textAlign = "left";
   
-  // Size reduced from 150 to 110 as requested
-  ctx.font = '110px "Revue", "Arial Black", sans-serif';
-  ctx.fillStyle = BRAND_COLOR;
-  ctx.fillText("BIRTHDAY", width / 2, 580);
+  // --- UPDATED HEADER FONTS TO REVUE ---
+  // Line 1: DAR-E-ARQAM
+  ctx.font = '45px "Revue", "Arial Black", sans-serif'; 
+  ctx.fillStyle = COLORS.primary;
+  ctx.fillText("DAR-E-ARQAM", textX, textY);
+
+  // Line 2: SCHOOL
+  ctx.font = '30px "Revue", "Arial Black", sans-serif';
+  ctx.fillStyle = COLORS.secondary; 
+  ctx.letterSpacing = "6px";
+  ctx.fillText("SCHOOL", textX, textY + 45);
+  ctx.letterSpacing = "0px";
+
+  // --- C. MAIN TEXT (Centered) ---
+  ctx.textAlign = "center";
+  const centerX = width / 2;
+  
+  // 1. "Wishing a"
+  let cursorY = 420;
+  ctx.font = 'italic 45px "Times New Roman", serif';
+  ctx.fillStyle = "#555";
+  ctx.fillText("Wishing a", centerX, cursorY);
+
+  // 2. HAPPY BIRTHDAY (Updated for Visibility)
+  cursorY += 110;
+  ctx.save();
+  
+  // CHANGED FONT: Not Revue, used Impact/Arial Black for style + boldness
+  ctx.font = 'bold 120px "Impact", "Arial Black", sans-serif'; 
+  
+  // CHANGED GRADIENT: Richer Gold to stand out on white
+  const textGradient = ctx.createLinearGradient(0, 0, width, 0);
+  textGradient.addColorStop(0.2, "#B8860B"); // Dark Goldenrod
+  textGradient.addColorStop(0.5, "#FFD700"); // Pure Gold
+  textGradient.addColorStop(0.8, "#B8860B"); 
+  
+  ctx.fillStyle = textGradient;
+  
+  // ADDED STROKE: Black/Navy outline ensures visibility on white background
+  ctx.strokeStyle = "#1E293B"; // Dark Navy Outline
+  ctx.lineWidth = 3; // Thickness of the outline
+
+  // Shadow for pop
+  ctx.shadowColor = "rgba(0,0,0,0.3)";
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 5;
+  
+  // Draw Stroke First (Behind) then Fill
+  ctx.strokeText("HAPPY", centerX, cursorY);
+  ctx.fillText("HAPPY", centerX, cursorY);
+  
+  ctx.strokeText("BIRTHDAY", centerX, cursorY + 115);
+  ctx.fillText("BIRTHDAY", centerX, cursorY + 115);
+  
   ctx.restore();
 
-  // 5. Student Name (The Focus)
-  // Decorative line above name
+  // 3. Student Name
+  cursorY += 280;
+  
+  // Decorative line
   ctx.beginPath();
-  ctx.strokeStyle = GOLD_COLOR;
+  ctx.moveTo(centerX - 80, cursorY - 70);
+  ctx.lineTo(centerX + 80, cursorY - 70);
+  ctx.strokeStyle = COLORS.secondary;
   ctx.lineWidth = 3;
-  ctx.moveTo(340, 650);
-  ctx.lineTo(740, 650);
   ctx.stroke();
 
   // Name Text
-  ctx.font = '900 90px "Arial Black", sans-serif';
-  ctx.fillStyle = "#222";
-  ctx.fillText(studentName.toUpperCase(), width / 2, 750);
+  ctx.font = 'bold 80px "Arial", sans-serif';
+  ctx.fillStyle = COLORS.primary;
+  
+  if (studentName.length > 12) ctx.font = 'bold 65px "Arial", sans-serif';
+  if (studentName.length > 18) ctx.font = 'bold 55px "Arial", sans-serif';
 
-  // Decorative line below name
-  ctx.beginPath();
-  ctx.moveTo(340, 790);
-  ctx.lineTo(740, 790);
-  ctx.stroke();
+  ctx.fillText(studentName.toUpperCase(), centerX, cursorY);
 
-  // 6. Footer Message
-  ctx.font = 'italic 30px "Times New Roman", serif';
-  ctx.fillStyle = "#666";
-  ctx.fillText("May your path be illuminated with knowledge.", width / 2, 900);
+  // --- D. FOOTER ---
+  cursorY += 120;
+  
+  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+  ctx.fillRect(0, cursorY - 50, width, 150); 
 
-  // Bottom Accent
-  ctx.fillStyle = BRAND_COLOR;
-  ctx.fillRect(490, 950, 100, 8); // Small central bar
+  ctx.font = 'italic 32px "Times New Roman", serif';
+  ctx.fillStyle = COLORS.textMuted;
+  ctx.fillText("May your year be filled with light,", centerX, cursorY);
+  ctx.fillText("blessings, and success.", centerX, cursorY + 45);
 
   return canvas.toBuffer("image/png");
 }
 
+// === DATA FETCHING ===
 async function fetchBirthdayStudents() {
   const today = new Date();
   const currentMonth = today.getMonth() + 1;
@@ -171,6 +258,7 @@ async function fetchBirthdayStudents() {
   });
 }
 
+// === BOT LOGIC ===
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, "auth_session_stable"));
   const { version } = await fetchLatestBaileysVersion();
@@ -206,8 +294,7 @@ async function processBirthdayQueue(sock) {
       console.log(`Generating card for ${student.name}...`);
       const imageBuffer = await generateBirthdayCard(student.name);
 
-      // === UPDATED CAPTION (Islamic Touch & Brief) ===
-      const captionStr = `🎉 *Happy Birthday, ${student.name}!* \n\nMay Allah (SWT) bless you with immense knowledge, health, and success in this world and the hereafter. 🤲✨\n\nBest wishes,\n*${SCHOOL_NAME}*`;
+      const captionStr = `🎂 *Happy Birthday, ${student.name}!* \n\nWishing you a wonderful year ahead.\n\n_May the Almighty bless your journey with knowledge and success._\n\nBest Wishes,\n*DAR-E-ARQAM SCHOOL*`;
 
       await sock.sendMessage(jid, {
         image: imageBuffer,
