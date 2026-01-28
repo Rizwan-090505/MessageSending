@@ -15,23 +15,18 @@ const { registerFont, createCanvas, loadImage } = require("canvas");
 const SUPABASE_URL = "https://tjdepqtouvbwqrakarkh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqZGVwcXRvdXZid3FyYWthcmtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxODM4NTMsImV4cCI6MjA2NDc1OTg1M30.5sippZdNYf3uLISBOHHlJkphtlJc_Q1ZRTzX9E8WYb8";
 
-// Branding Config - Premium & Aesthetic
-const COLORS = {
-  primary: "#0F172A",    // Rich Navy (almost black)
-  secondary: "#D4AF37",  // Luxury Gold
-  secondaryLight: "#F3E5AB", // Champagne Gold
-  bgCenter: "#FFFFFF",
-  bgEdge: "#F1F5F9",     // Cool Grey edge
-  textMain: "#1E293B",
-  textMuted: "#64748B"
-};
+// File Paths
+// NOTE: Download a fancy Google Font (e.g., 'Great Vibes'), rename it to 'font.ttf', and put it here.
+const FONT_PATH = path.join(__dirname, "font.ttf");
+const LAYOUT_PATH = path.join(__dirname, "layout.png");
 
-const FONT_PATH = path.join(__dirname, "revue.ttf");
-const LOGO_PATH = path.join(__dirname, "logo.png");
-
-// Ensuring font is registered
+// === FONT REGISTRATION ===
 if (fs.existsSync(FONT_PATH)) {
-  registerFont(FONT_PATH, { family: "Revue" });
+  // We register it as "FancyGoogleFont" to use in the canvas
+  registerFont(FONT_PATH, { family: "FancyGoogleFont" });
+  console.log("✅ Custom font loaded (Local file used, no OS install needed).");
+} else {
+  console.warn("⚠️ font.ttf NOT found! Text will use system default.");
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -45,198 +40,70 @@ function formatJid(number) {
   return null;
 }
 
-// === HIGH-END GRAPHICS HELPERS ===
-
-// 1. Draw "Fancier" Corner Ribbons/Waves
-function drawCornerDecorations(ctx, width, height) {
-  ctx.save();
-  
-  // Top Right Gold Wave
-  ctx.beginPath();
-  ctx.moveTo(width, 0);
-  ctx.lineTo(width, 350);
-  ctx.bezierCurveTo(width - 100, 300, width - 350, 100, width - 400, 0);
-  ctx.fillStyle = COLORS.secondary;
-  ctx.fill();
-
-  // Top Right Navy Accent (Behind Gold)
-  ctx.beginPath();
-  ctx.moveTo(width, 0);
-  ctx.lineTo(width, 400);
-  ctx.bezierCurveTo(width - 50, 350, width - 400, 150, width - 450, 0);
-  ctx.globalCompositeOperation = "destination-over"; // Draw behind
-  ctx.fillStyle = COLORS.primary;
-  ctx.fill();
-  ctx.globalCompositeOperation = "source-over"; // Reset
-
-  // Bottom Left Navy Wave
-  ctx.beginPath();
-  ctx.moveTo(0, height);
-  ctx.lineTo(0, height - 300);
-  ctx.bezierCurveTo(100, height - 250, 300, height - 50, 400, height);
-  ctx.fillStyle = COLORS.primary;
-  ctx.fill();
-
-  // Bottom Left Gold Accent
-  ctx.beginPath();
-  ctx.moveTo(0, height);
-  ctx.lineTo(0, height - 250);
-  ctx.bezierCurveTo(50, height - 200, 250, height - 50, 300, height);
-  ctx.fillStyle = COLORS.secondary;
-  ctx.fill();
-
-  ctx.restore();
-}
-
-// 2. Gold Dust / Confetti (Premium feel)
-function drawGoldDust(ctx, width, height) {
-  const count = 50;
-  const colors = [COLORS.secondary, COLORS.secondaryLight, "#E6C200"];
-  
-  for (let i = 0; i < count; i++) {
-    const x = Math.random() * width;
-    const y = Math.random() * height;
-    const size = Math.random() * 4 + 1;
-    
-    ctx.globalAlpha = Math.random() * 0.6 + 0.2;
-    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
-    
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1.0;
-}
-
 // === MAIN IMAGE GENERATOR ===
 async function generateBirthdayCard(studentName) {
-  const width = 1080;
-  const height = 1080;
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext("2d");
+  // 1. Check layout existence
+  if (!fs.existsSync(LAYOUT_PATH)) {
+    throw new Error("❌ layout.png not found! Please add it to the folder.");
+  }
 
-  // --- A. BACKGROUND ---
-  // Radial Gradient for a "Spotlight" effect
-  const grd = ctx.createRadialGradient(width/2, height/2, 100, width/2, height/2, 800);
-  grd.addColorStop(0, COLORS.bgCenter);
-  grd.addColorStop(1, COLORS.bgEdge);
-  ctx.fillStyle = grd;
-  ctx.fillRect(0, 0, width, height);
+  // 2. Load Original Image
+  const originalImage = await loadImage(LAYOUT_PATH);
+  const originalWidth = originalImage.width;
+  const originalHeight = originalImage.height;
 
-  // Add Texture/Decorations
-  drawCornerDecorations(ctx, width, height);
-  drawGoldDust(ctx, width, height);
+  // 3. Create Full-Size Canvas (for high-res text writing)
+  const mainCanvas = createCanvas(originalWidth, originalHeight);
+  const ctx = mainCanvas.getContext("2d");
 
-  // --- B. HEADER (Top Left) ---
-  const padX = 60;
-  const padY = 60;
-  const logoSize = 130;
+  // Draw Layout
+  ctx.drawImage(originalImage, 0, 0, originalWidth, originalHeight);
 
-  try {
-    if (fs.existsSync(LOGO_PATH)) {
-      const logo = await loadImage(LOGO_PATH);
-      ctx.save();
-      ctx.shadowColor = "rgba(0,0,0,0.2)";
-      ctx.shadowBlur = 10;
-      ctx.drawImage(logo, padX, padY, logoSize, logoSize);
-      ctx.restore();
-    }
-  } catch (e) {}
+  // 4. Draw Text
+  const x = 1273;
+  const y = 900;
 
-  // Text next to Logo
-  const textX = padX + logoSize + 30;
-  const textY = padY + 60; 
+  // using 125pt size and the custom registered font family
+  ctx.font = '125pt "FancyGoogleFont", "cursive", sans-serif'; 
+  ctx.fillStyle = "#000000"; 
+  ctx.textAlign = "left";    
+  ctx.textBaseline = "middle"; 
 
-  ctx.textAlign = "left";
-  
-  // --- UPDATED HEADER FONTS TO REVUE ---
-  // Line 1: DAR-E-ARQAM
-  ctx.font = '45px "Revue", "Arial Black", sans-serif'; 
-  ctx.fillStyle = COLORS.primary;
-  ctx.fillText("DAR-E-ARQAM", textX, textY);
+  // CHANGED: Convert Name to Lowercase
+  ctx.fillText(studentName, x, y);
 
-  // Line 2: SCHOOL
-  ctx.font = '30px "Revue", "Arial Black", sans-serif';
-  ctx.fillStyle = COLORS.secondary; 
-  ctx.letterSpacing = "6px";
-  ctx.fillText("SCHOOL", textX, textY + 45);
-  ctx.letterSpacing = "0px";
+  // 5. CROP LOGIC (Trim 10% off left and right)
+  const trimAmount = originalWidth * 0.10; 
+  const cropX = trimAmount;
+  const cropWidth = originalWidth - (trimAmount * 2); 
+  const cropHeight = originalHeight;
 
-  // --- C. MAIN TEXT (Centered) ---
-  ctx.textAlign = "center";
-  const centerX = width / 2;
-  
-  // 1. "Wishing a"
-  let cursorY = 420;
-  ctx.font = 'italic 45px "Times New Roman", serif';
-  ctx.fillStyle = "#555";
-  ctx.fillText("Wishing a", centerX, cursorY);
+  // Create intermediate canvas for the cropped version
+  const croppedCanvas = createCanvas(cropWidth, cropHeight);
+  const croppedCtx = croppedCanvas.getContext("2d");
 
-  // 2. HAPPY BIRTHDAY (Updated for Visibility)
-  cursorY += 110;
-  ctx.save();
-  
-  // CHANGED FONT: Not Revue, used Impact/Arial Black for style + boldness
-  ctx.font = 'bold 120px "Impact", "Arial Black", sans-serif'; 
-  
-  // CHANGED GRADIENT: Richer Gold to stand out on white
-  const textGradient = ctx.createLinearGradient(0, 0, width, 0);
-  textGradient.addColorStop(0.2, "#B8860B"); // Dark Goldenrod
-  textGradient.addColorStop(0.5, "#FFD700"); // Pure Gold
-  textGradient.addColorStop(0.8, "#B8860B"); 
-  
-  ctx.fillStyle = textGradient;
-  
-  // ADDED STROKE: Black/Navy outline ensures visibility on white background
-  ctx.strokeStyle = "#1E293B"; // Dark Navy Outline
-  ctx.lineWidth = 3; // Thickness of the outline
+  croppedCtx.drawImage(
+    mainCanvas, 
+    cropX, 0, cropWidth, cropHeight, // Source (cut out the middle)
+    0, 0, cropWidth, cropHeight      // Destination
+  );
 
-  // Shadow for pop
-  ctx.shadowColor = "rgba(0,0,0,0.3)";
-  ctx.shadowBlur = 10;
-  ctx.shadowOffsetY = 5;
-  
-  // Draw Stroke First (Behind) then Fill
-  ctx.strokeText("HAPPY", centerX, cursorY);
-  ctx.fillText("HAPPY", centerX, cursorY);
-  
-  ctx.strokeText("BIRTHDAY", centerX, cursorY + 115);
-  ctx.fillText("BIRTHDAY", centerX, cursorY + 115);
-  
-  ctx.restore();
+  // 6. SHRINK LOGIC (Resize to make file smaller)
+  const scaleFactor = 0.5; // Resize to 50%
+  const finalWidth = Math.floor(cropWidth * scaleFactor);
+  const finalHeight = Math.floor(cropHeight * scaleFactor);
 
-  // 3. Student Name
-  cursorY += 280;
-  
-  // Decorative line
-  ctx.beginPath();
-  ctx.moveTo(centerX - 80, cursorY - 70);
-  ctx.lineTo(centerX + 80, cursorY - 70);
-  ctx.strokeStyle = COLORS.secondary;
-  ctx.lineWidth = 3;
-  ctx.stroke();
+  const finalCanvas = createCanvas(finalWidth, finalHeight);
+  const finalCtx = finalCanvas.getContext("2d");
 
-  // Name Text
-  ctx.font = 'bold 80px "Arial", sans-serif';
-  ctx.fillStyle = COLORS.primary;
-  
-  if (studentName.length > 12) ctx.font = 'bold 65px "Arial", sans-serif';
-  if (studentName.length > 18) ctx.font = 'bold 55px "Arial", sans-serif';
+  // Draw the cropped image onto the smaller canvas
+  finalCtx.drawImage(
+    croppedCanvas,
+    0, 0, cropWidth, cropHeight,   // Source Dimensions (Full cropped image)
+    0, 0, finalWidth, finalHeight  // Destination Dimensions (Shrunk)
+  );
 
-  ctx.fillText(studentName.toUpperCase(), centerX, cursorY);
-
-  // --- D. FOOTER ---
-  cursorY += 120;
-  
-  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-  ctx.fillRect(0, cursorY - 50, width, 150); 
-
-  ctx.font = 'italic 32px "Times New Roman", serif';
-  ctx.fillStyle = COLORS.textMuted;
-  ctx.fillText("May your year be filled with light,", centerX, cursorY);
-  ctx.fillText("blessings, and success.", centerX, cursorY + 45);
-
-  return canvas.toBuffer("image/png");
+  return finalCanvas.toBuffer("image/png");
 }
 
 // === DATA FETCHING ===
@@ -292,6 +159,7 @@ async function processBirthdayQueue(sock) {
 
     try {
       console.log(`Generating card for ${student.name}...`);
+      
       const imageBuffer = await generateBirthdayCard(student.name);
 
       const captionStr = `🎂 *Happy Birthday, ${student.name}!* \n\nWishing you a wonderful year ahead.\n\n_May the Almighty bless your journey with knowledge and success._\n\nBest Wishes,\n*DAR-E-ARQAM SCHOOL*`;
