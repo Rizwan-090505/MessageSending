@@ -1,0 +1,29 @@
+name: Run Attendance Report
+
+on:
+  schedule:
+    # Friday 6:00 PM PST (UTC-8) is Saturday 2:00 AM UTC
+    # Note: If you are in Daylight Savings (PDT), this will run at 7:00 PM PDT
+    - cron: '0 2 * * 6'
+  workflow_dispatch:         # Still allows manual testing
+
+jobs:
+  run-node:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          # Only rename if your file is actually named ci.json
+          npm install
+
+      - name: Run script
+        run: node marksrep.js
