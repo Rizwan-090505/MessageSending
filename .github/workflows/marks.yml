@@ -1,4 +1,4 @@
-name: Run Attendance Report
+name: Run Marks Report
 
 on:
   schedule:
