@@ -2,7 +2,15 @@ name: Run Node Script
 
 on:
   schedule:
-    - cron: '*/30 * * * *'   # runs every 30 minutes (UTC)
+    # A - Every 20 mins from 7:30 AM to 2:30 PM PKT (02:30 to 09:30 UTC)
+    # Note: '30-59/20 2' handles the 2:30 start; '*/20 3-8' handles the middle; '0-30/20 9' handles the end.
+    - cron: '30,50 2 * * *'
+    - cron: '*/20 3-8 * * *'
+    - cron: '10,30 9 * * *'
+
+    # B - Every 2 hours from 2:30 PM to 10:00 PM PKT (09:30 to 17:00 UTC)
+    - cron: '30 11-17/2 * * *'
+    
   workflow_dispatch:         # allows manual run from GitHub UI
 
 jobs:
