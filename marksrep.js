@@ -6,7 +6,7 @@ const puppeteer = require("puppeteer");
 // === CONFIGURATION ===
 const SUPABASE_URL = "https://tjdepqtouvbwqrakarkh.supabase.co"; 
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqZGVwcXRvdXZid3FyYWthcmtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxODM4NTMsImV4cCI6MjA2NDc1OTg1M30.5sippZdNYf3uLISBOHHlJkphtlJc_Q1ZRTzX9E8WYb8";
-const ADMIN_NUMBER = "923085333392@s.whatsapp.net"; 
+const ADMIN_NUMBER = "923164781383@s.whatsapp.net"; 
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
