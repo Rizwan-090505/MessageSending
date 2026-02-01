@@ -188,10 +188,10 @@ async function readExcelData() {
 
     sheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return;
-        const id = getColVal(row, headers, ['id', 'reg']);
+        const id = getColVal(row, headers, ['id', 'reg','Student ID']);
         if (id) {
             const current = parseFloat(getColVal(row, headers, ['current', 'tuition']) || 0);
-            const arrears = parseFloat(getColVal(row, headers, ['arrears']) || 0);
+            const arrears = parseFloat(getColVal(row, headers, ['arrears','arrear']) || 0);
             const annual = parseFloat(getColVal(row, headers, ['annual']) || 0);
             const stationery = parseFloat(getColVal(row, headers, ['stationery']) || 0);
             
