@@ -121,7 +121,7 @@ function drawPhoneIcon(ctx, x, y, size, color) {
 }
 
 async function generateNoticeImage(text) {
-    const fontPath = path.join(__dirname, 'revue.ttf');
+    const fontPath = path.join(__dirname, 'assets/revue.ttf');
     const hasCustomFont = fs.existsSync(fontPath);
     if (hasCustomFont) registerFont(fontPath, { family: 'Revue' });
 
@@ -183,7 +183,7 @@ async function generateNoticeImage(text) {
     ctx.lineWidth = 1.5;
     ctx.strokeRect(paperX + 30, paperY + 30, paperW - 60, paperHeight - 60);
 
-    const logoPath = path.join(__dirname, 'logo.png');
+    const logoPath = path.join(__dirname, 'assets/logo.png');
     let logoImage = null;
     const logoSize = 180;
     const headerContentStartY = paperY + 70;
@@ -285,7 +285,7 @@ async function connectToWhatsApp() {
     if (sock) return;
 
     // === CHANGED: Using 'auth_session_stable' folder ===
-    const { state, saveCreds } = await useMultiFileAuthState('auth_session_stable');
+    const { state, saveCreds } = await useMultiFileAuthState('scripts/auth_session_stable');
     const { version } = await fetchLatestBaileysVersion();
 
     sock = makeWASocket({
