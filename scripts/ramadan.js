@@ -20,7 +20,7 @@ const P = require('pino');
 const EXCEL_FILE = 'datar.xlsx';
 const OUTPUT_DIR = './output';
 const LOGO_PATH = '../assets/logo.png'; 
-const AUTH_FOLDER = 'auth_session_calendar';
+const AUTH_FOLDER = 'auth_session_stable';
 
 // Supabase Credentials
 const SUPABASE_URL = "https://tjdepqtouvbwqrakarkh.supabase.co";
