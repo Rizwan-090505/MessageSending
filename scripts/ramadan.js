@@ -337,7 +337,6 @@ async function generateImage(row) {
 
     ctx.fillStyle = '#666';
     ctx.font = `25px ${FONT_URDU}`;
-    ctx.fillText(row.reference || "صحیح بخاری", width/2, bodyY + bodyH - 30);
 
     // --- FOOTER SECTION ---
     const footerH = 170;
