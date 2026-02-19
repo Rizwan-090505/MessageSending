@@ -113,7 +113,7 @@ async function fetchBirthdayStudents() {
   const currentDay = today.getDate();
 
   const { data, error } = await supabase
-    .from("students")
+    .from("active_students")
     .select("studentid, name, fathername, mobilenumber, dob");
 
   if (error) throw new Error(`Supabase fetch failed: ${error.message}`);

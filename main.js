@@ -350,7 +350,7 @@ async function handleSendingProcess(payload) {
     mainWindow.webContents.send('log', '>> Starting Bulk Sender...');
     mainWindow.webContents.send('log', '>> Fetching students from Database...');
 
-    let query = supabase.from("students").select("*, classes!inner(name)").in("classes.name", classNames);
+    let query = supabase.from("active_students").select("*, classes!inner(name)").in("classes.name", classNames);
     if (filterStatus === "CLEARED") query = query.eq("Clear", true);
     if (filterStatus === "NOT_CLEARED") query = query.eq("Clear", false);
 
